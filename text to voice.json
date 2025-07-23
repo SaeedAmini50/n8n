@@ -1,0 +1,195 @@
+{
+  "name": "voice",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        352,
+        -208
+      ],
+      "id": "7ec07495-a23b-4c9c-8f5c-cfeb94bbc7da",
+      "name": "Telegram Trigger",
+      "webhookId": "47525b90-5c56-4b59-b985-78a3d73284d9"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "(API_KEY)"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\":[\n    {\n      \"parts\":[{ \"text\":\"{{ $json.message.text }}\" }]\n    }\n  ],\n  \"generationConfig\":{\n    \"responseModalities\":[\"AUDIO\"],\n    \"speechConfig\":{\n      \"voiceConfig\":{\n        \"prebuiltVoiceConfig\":{\n          \"voiceName\":\"Zephyr\"\n        }\n      }\n    }\n  },\n  \"model\":\"gemini-2.5-flash-preview-tts\"\n}\n",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 21
+            }
+          },
+          "response": {}
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        608,
+        -96
+      ],
+      "id": "673bd73b-ef60-48c1-8442-95cb53197ad2",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        192
+      ],
+      "id": "6e5d9244-b0f6-4da3-bb1e-e807bf80e372",
+      "name": "Telegram",
+      "webhookId": "7d3a4f0d-e69d-49bb-8f51-8d1705793d6b"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Function node\n// Input: item.json should be the HTTP Request response, e.g.\n// { candidates:[ { content:{ parts:[ { inlineData:{ mimeType:\"audio/L16;codec=pcm;rate=24000\", data:\"<base64>\" } } ] } } ] }\n\nreturn items.map(item => {\n  // 1) pull out the inlineData\n  const inline = item.json\n    ?.candidates?.[0]\n    ?.content?.parts?.[0]\n    ?.inlineData;\n\n  if (!inline || !inline.data) {\n    // no audio here? just return unchanged\n    return item;\n  }\n\n  // 2) decode base64 → Buffer\n  const pcmBuffer = Buffer.from(inline.data, 'base64');\n\n  // 3) WAV params\n  const numChannels   = 1;        // mono\n  const sampleRate    = 24000;    // 24 kHz\n  const bitsPerSample = 16;       // 16‐bit PCM\n  const byteRate      = sampleRate * numChannels * bitsPerSample / 8;\n  const blockAlign    = numChannels * bitsPerSample / 8;\n\n  // 4) build 44-byte WAV header\n  const header = Buffer.alloc(44);\n  header.write('RIFF',  0);                             // ChunkID\n  header.writeUInt32LE(36 + pcmBuffer.length, 4);       // ChunkSize\n  header.write('WAVE',  8);                             // Format\n  header.write('fmt ', 12);                             // Subchunk1ID\n  header.writeUInt32LE(16, 16);                         // Subchunk1Size (PCM)\n  header.writeUInt16LE(1, 20);                          // AudioFormat (1 = PCM)\n  header.writeUInt16LE(numChannels, 22);                // NumChannels\n  header.writeUInt32LE(sampleRate, 24);                 // SampleRate\n  header.writeUInt32LE(byteRate, 28);                   // ByteRate\n  header.writeUInt16LE(blockAlign, 32);                 // BlockAlign\n  header.writeUInt16LE(bitsPerSample, 34);              // BitsPerSample\n  header.write('data', 36);                             // Subchunk2ID\n  header.writeUInt32LE(pcmBuffer.length, 40);           // Subchunk2Size\n\n  // 5) concat header + pcm\n  const wavBuffer = Buffer.concat([header, pcmBuffer]);\n\n  // 6) expose as n8n binary\n  item.binary = {\n    data: {\n      data:     wavBuffer.toString('base64'),\n      mimeType: 'audio/wav',\n      fileName: 'speech.wav',\n    }\n  };\n\n  return item;\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        144
+      ],
+      "id": "06275d20-e485-46a9-a6d7-6f5241c0f2fc",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        608,
+        368
+      ],
+      "id": "d213e44d-1545-4675-aded-4302ff909bae",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data",
+        "options": {
+          "mimeType": "audio/ogg"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        608,
+        592
+      ],
+      "id": "9be30516-a4c1-49c0-aeba-45ee35900e4e",
+      "name": "Convert to File"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a9c7e5b3-8590-4403-8109-050ec17a7270",
+  "meta": {
+    "instanceId": "3181f7fbd61c75f43081e9c0bf5ee3a99eef47e6ecd97e364a854f0356a066e8"
+  },
+  "id": "yUeDlYTeowzIhyN5",
+  "tags": []
+}

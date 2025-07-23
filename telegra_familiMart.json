@@ -1,0 +1,1104 @@
+{
+  "name": "telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": "={{ [\"message\"] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -688,
+        512
+      ],
+      "id": "10facb28-b720-4178-87e1-d9c1f3b4eab4",
+      "name": "Receive Message",
+      "webhookId": "97ad91b8-8d3c-4c40-b197-bd5e509538ba",
+      "credentials": {
+        "telegramApi": {
+          "id": "lMu7bIOIHzqRW1qp",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4.1-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.1,
+      "position": [
+        528,
+        464
+      ],
+      "id": "5fb6b73e-6462-4bea-83bc-ec45b76fff2d",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "sgMRDF8Gri7q4pq0",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=### ۱. هویت و نقش (Persona)\n\n- **نام تو:** \"ربات افغان\" (afghan robot) است.\n- **شخصیت تو:** تو یک دستیار هوشمند، بسیار مودب و محترم هستی. همیشه با لحنی دوستانه، صبور و کمک‌کننده صحبت می‌کنی. از آداب و رسوم اسلامی و فرهنگ غنی افغانستان در تعاملات خود پیروی می‌کنی.\n- **زبان:** تو به زبان‌های دری و پشتو مسلط هستی و با زبانی که کاربر از تو سوال می‌پرسد، به او پاسخ می‌دهی.\n- **محدودیت مهم:** تو هرگز وارد بحث‌های سیاسی، به خصوص در مورد طالبان افغانستان، نمی‌شوی و هیچ نظری در این موارد نمی‌دهی. اگر از تو سوالی در این زمینه پرسیده شد، با احترام موضوع را عوض می‌کنی.\n\n### ۲. اطلاعات زمینه (Context)\n\n- **نام کاربر:** تو در حال صحبت با {{ $('Switch').item.json.message.from.first_name }} هستی.\n- **زمان فعلی:** {{ $now }}\n\n### ۳. ابزارها و کاربرد دقیق آنها (Tools)\n\n**ابزار ۱: `products familymart`**\n- **کاربرد:** **فقط زمانی** که کاربر در مورد جزئیات محصولات، قیمت، موجودی، مشخصات فنی یا مقایسه مدل‌های **یخچال و ماشین لباسشویی** سوال می‌پرسد، از این ابزار استفاده کن. این ابزار به کاتالوگ کامل محصولات دسترسی دارد.\n\n**ابزار ۲: `family mart info`**\n- **کاربرد:** **فقط زمانی** که کاربر در مورد اطلاعات کلی شرکت \"فامیلی مارت\" مانند آدرس، ساعات کاری، شماره تماس، یا ماموریت شرکت سوال می‌پرسد، از این ابزار استفاده کن.\n\n**ابزار ۳: `Get Emails`**\n- **کاربرد:** برای خواندن ایمیل‌های جدید و خوانده نشده از جیمیل استفاده کن.\n\n**ابزار ۴: `Send Email`**\n- **کاربرد:** برای ارسال ایمیل استفاده کن.\n- **قانون حیاتی:** تو **فقط و فقط** مجاز به ارسال ایمیل به دو آدرس زیر هستی:\n  - برنامه‌نویس: `saeedamini506750@email.com`\n  - شرکت فامیلی مارت: `familymartwork@emil.com`\n- هرگز از کاربر آدرس ایمیلی برای ارسال نپرس. از این ابزار برای ارسال گزارش یا اطلاع‌رسانی به تیم داخلی استفاده کن.\n\n**ابزار ۵: `Get Calendar` و `Set Calendar1`**\n- **کاربرد:** برای خواندن رویدادهای تقویم یا ثبت یک رویداد جدید (مانند تنظیم قرار ملاقات برای مشتری) از این ابزارها استفاده کن.\n\n### ۴. قوانین و فرآیند کاری (Rules & Process)\n\n1.  **شروع مکالمه:** همیشه مکالمه را با سلام و احترام و با استفاده از نام کاربر (در صورت وجود) آغاز کن.\n2.  **درک هدف کاربر:** ابتدا با دقت سوال کاربر را تحلیل کن تا بفهمی به دنبال چه چیزی است (اطلاعات محصول، اطلاعات شرکت، ارسال ایمیل و غیره).\n3.  **انتخاب ابزار مناسب:** بر اساس هدف کاربر، بهترین ابزار را از لیست بالا انتخاب کن.\n4.  **پاسخ مبتنی بر منبع:** همیشه بر اساس خروجی ابزارها پاسخ بده. اگر اطلاعاتی در مورد محصول یا شرکت در ابزارهای `products familymart` یا `family mart info` وجود نداشت، هرگز از دانش عمومی خودت پاسخ را نساز.\n5.  **مدیریت خطا:** اگر نتوانستی درخواست کاربر را انجام دهی یا یک ابزار با خطا مواجه شد، مودبانه عذرخواهی کرده و بگو: \"متاسفانه در حال حاضر قادر به انجام این درخواست نیستم. لطفاً سوال خود را به شکل دیگری مطرح کنید یا اجازه دهید این موضوع را به تیم انسانی اطلاع دهم.\"\n6.  **پایان مکالمه:** همیشه در انتهای هر پیام، فوتر زیر را اضافه کن.\n\n### ۵. فرمت خروجی (Output Format)\n\n- **لحن:** دوستانه، محترمانه و مفید.\n- **فوتر (Footer):** همیشه در انتهای پیام‌هایت، متن زیر را قرار بده:\n---\nاسم شرکت: فامیلی مارت\nآدرس: چهارراهی پل سرخ، لب دریا، پهلوی حمام پنج ستاره پل سرخ\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        592,
+        304
+      ],
+      "id": "bad0bb37-aadd-4b31-b2cf-062c11425f57",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f6d0a607-e0ad-49ba-9987-10ad2889b536",
+                    "leftValue": "={{ $json.message.photo }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "array",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2a9d7a90-7f2e-4228-84df-6476a2534a04",
+                    "leftValue": "={{ $json.message.voice.file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "voice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "3e5ea299-2bc7-4156-a255-9583608ab4be"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -208,
+        528
+      ],
+      "id": "1ad7bf93-de51-48f1-bb6a-a4700e670fec",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -48,
+        240
+      ],
+      "id": "1329811c-303e-45b1-a436-7e09b81f0f49",
+      "name": "Get Audio File",
+      "webhookId": "ea977965-cb53-4034-afcc-5850b78cf8d6",
+      "credentials": {
+        "telegramApi": {
+          "id": "lMu7bIOIHzqRW1qp",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini-search-preview-2025-03-11",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI-SEARCH-PREVIEW-2025-03-11"
+        },
+        "text": "={{ $('Receive Message').item.json.message.caption || \"Describe this image\" }}",
+        "inputType": "base64",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        288,
+        -96
+      ],
+      "id": "80c64d7f-801f-40ea-8da0-bcf81c77f3e5",
+      "name": "Analyze Image",
+      "credentials": {
+        "openAiApi": {
+          "id": "oMwv7d2yXqR7IyHf",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItem = items[0];\nconst extension = inputItem.binary.data.fileExtension;\ninputItem.binary.data.mimeType = `image/${extension}`;\nreturn inputItem;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        -96
+      ],
+      "id": "f37a7844-0d01-4ed7-8f7e-5ea7900c0513",
+      "name": "Fix File Extension"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ec3a884f-480f-4462-9437-a7de0faed372",
+              "name": "output",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "d65ec861-1066-4c49-9c1c-5290cc85a1dc",
+      "name": "Format Output"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "88cbdd27-f094-458b-878f-60504b8c3ad7",
+              "name": "text",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        112,
+        528
+      ],
+      "id": "34f779a9-06a0-4820-baa3-cfa787dc0bce",
+      "name": "Agent Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3d8b9900-fe93-48d3-a1cf-8fd70542f091",
+              "leftValue": "={{ $('Receive Message').item.json.message.voice.file_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "34394471-ebd6-4e64-9a1f-4716fcb65014",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1008,
+        160
+      ],
+      "id": "e657c489-fff9-433d-8813-69621caa1ca8",
+      "name": "Audio Response?"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Receive Message').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1488,
+        192
+      ],
+      "id": "c24e35ef-48ce-406e-8cc6-9f8fadf2f1ac",
+      "name": "Text Response",
+      "webhookId": "5805eda3-1f85-444a-9f23-66e2383f0d4f",
+      "credentials": {
+        "telegramApi": {
+          "id": "lMu7bIOIHzqRW1qp",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $json.output }}",
+        "voice": "nova",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1392,
+        32
+      ],
+      "id": "adb9afa9-35e3-474d-8faf-6d2f468ef1eb",
+      "name": "Generate Audio",
+      "credentials": {
+        "openAiApi": {
+          "id": "oMwv7d2yXqR7IyHf",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{ $('Receive Message').item.json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1568,
+        32
+      ],
+      "id": "52ab7908-81b8-4bb3-aff8-f9856577fadd",
+      "name": "Audio Response",
+      "webhookId": "8d5d057f-41e8-4402-9da8-956f48c2122a",
+      "credentials": {
+        "telegramApi": {
+          "id": "lMu7bIOIHzqRW1qp",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[2].file_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        -80
+      ],
+      "id": "d07a23f8-2f8b-4f15-92d5-e20f46084594",
+      "name": "Download Image",
+      "webhookId": "4404a756-41e5-4497-82ed-dc79427faedc",
+      "credentials": {
+        "telegramApi": {
+          "id": "lMu7bIOIHzqRW1qp",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        224,
+        240
+      ],
+      "id": "289120b7-9b79-444f-8b2e-17914fe9ebd3",
+      "name": "Transcribe",
+      "credentials": {
+        "openAiApi": {
+          "id": "oMwv7d2yXqR7IyHf",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Agent Tools",
+        "height": 380,
+        "width": 840
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        64,
+        768
+      ],
+      "id": "640eb0d7-cef0-4218-9c5c-d2b4af719bd3",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Image Chat",
+        "height": 260,
+        "width": 760
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -176
+      ],
+      "id": "d1a74226-fe44-45cf-82a3-f25307d6e671",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Voice Chat",
+        "height": 240,
+        "width": 540
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        160
+      ],
+      "id": "33a4cca0-9f89-45e6-89db-6e83261173b2",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Text Chat",
+        "height": 240,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        464
+      ],
+      "id": "7ab917da-8c07-4d22-a29a-38d8c58c2e50",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Handle Responses",
+        "height": 280,
+        "width": 760
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        992,
+        32
+      ],
+      "id": "3066a528-9a95-418c-94f3-d59e919c6bbc",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## AI Agent",
+        "height": 440,
+        "width": 380
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        224
+      ],
+      "id": "be8815eb-8851-4174-9157-dd5c14659586",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "{{ $('Receive Message').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        480
+      ],
+      "id": "4994342d-8fbb-421a-a498-81e258f1705b",
+      "name": "Window Buffer Memory"
+    },
+    {
+      "parameters": {
+        "sendTo": "=saeedamini506750@gmail.com",
+        "subject": "={{ $fromAI('email_subject') }}",
+        "emailType": "text",
+        "message": "={{ $fromAI('email_body') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        640,
+        928
+      ],
+      "id": "3bed9fef-0ca0-496f-a922-f876070e28a9",
+      "name": "Sand Email",
+      "webhookId": "e5b7b093-3510-4fac-ab5b-517becf62cf9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Nt5rzBjJEMdQWvpD",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1t03yW9MPtIQ_iilpV4aNRzhigHjXInTLyUQYjzEAuvQ/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t03yW9MPtIQ_iilpV4aNRzhigHjXInTLyUQYjzEAuvQ/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        512,
+        912
+      ],
+      "id": "0bb8510a-3e13-4bd0-bd70-de4d73ec6b18",
+      "name": "products familymart",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TZdvch2EQouZVtoy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "familymartwork@gmail.com",
+          "mode": "list",
+          "cachedResultName": "familymartwork@gmail.com"
+        },
+        "start": "={{ $fromAI('Start', `2025-05-28T09:00:00+04:30`, 'string') }}",
+        "end": "={{ $fromAI('end', \"Date and time when the event should end\") }}",
+        "additionalFields": {
+          "description": "={{ $fromAI('description', \"Description of the event\") }}",
+          "summary": "={{ $fromAI('title', \"Title of the event\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        912
+      ],
+      "id": "cbdfe27f-fdf2-42f8-bdfe-e98011534731",
+      "name": "Set Calendar1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yVhbe0lZQbrWpZRp",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_7VtBPNlNwJ_8AkAo0jzOMGFPWBVhZ_aiLL-ssi_tg4/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_7VtBPNlNwJ_8AkAo0jzOMGFPWBVhZ_aiLL-ssi_tg4/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        80,
+        880
+      ],
+      "id": "645d04cc-c719-4d84-b7b1-5dd229b40077",
+      "name": "family mart info",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TZdvch2EQouZVtoy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1HnQNqolEMhAFItwYiL64gr1NtnjUFH9qyPCzfbGPxhM/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1HnQNqolEMhAFItwYiL64gr1NtnjUFH9qyPCzfbGPxhM/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        208,
+        880
+      ],
+      "id": "e7bda53c-b960-4747-b490-4b17632c5e43",
+      "name": "roll of speak",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TZdvch2EQouZVtoy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "id": "38f8ae7f-e509-4a61-9833-2ad59d35ccc2"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b85d3e44-20a4-42be-a3ba-38c0d6026f5b",
+                    "leftValue": "",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -464,
+        512
+      ],
+      "id": "79f67769-e046-4c7d-8d41-857ac7766e59",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0f1ef524-3952-4dd1-ab46-c9646b15c635",
+              "name": "upsellMessage",
+              "value": "با خریداری از فامیلی مارت میتوانید این محدودیت ها رو بردارید. آیا دوست دارید بدانید درموردش؟",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -640,
+        864
+      ],
+      "id": "b5f3b7cb-afc7-4434-814a-ba46f6d2ba70",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Receive Message').item.json.message.chat.id }}",
+        "text": "={{ $json.upsellMessage }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "بلی",
+                    "additionalFields": {
+                      "switch_inline_query_current_chat": "بله دوست دارم درمورد محصولات شما بدانم"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -416,
+        848
+      ],
+      "id": "6dd10a30-1467-422f-84e2-64248b5eac72",
+      "name": "Telegram",
+      "webhookId": "3ac5f362-30ec-44f7-8566-ecd059430134",
+      "credentials": {
+        "telegramApi": {
+          "id": "lMu7bIOIHzqRW1qp",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Text Chat",
+        "height": 240,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -688,
+        784
+      ],
+      "id": "ae40508f-435c-4932-a1e2-24822d94e61a",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "start chat",
+        "height": 240,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        432
+      ],
+      "id": "b0531ada-4630-4c03-8308-3d849003a215",
+      "name": "Sticky Note7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive Message": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Audio File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Audio File": {
+      "main": [
+        [
+          {
+            "node": "Transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Audio Response?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix File Extension": {
+      "main": [
+        [
+          {
+            "node": "Analyze Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Image": {
+      "main": [
+        [
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Output": {
+      "main": [
+        [
+          {
+            "node": "Text Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Input": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio Response?": {
+      "main": [
+        [
+          {
+            "node": "Generate Audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Text Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Audio": {
+      "main": [
+        [
+          {
+            "node": "Audio Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Fix File Extension",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sand Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "products familymart": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Calendar1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "family mart info": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "roll of speak": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "33aec277-5b9d-4625-80bf-3e1c620382b6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3181f7fbd61c75f43081e9c0bf5ee3a99eef47e6ecd97e364a854f0356a066e8"
+  },
+  "id": "qcqhhx5Skn6aUTju",
+  "tags": []
+}

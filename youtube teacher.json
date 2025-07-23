@@ -1,0 +1,740 @@
+{
+  "name": "youtube teacher",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the video address from the Telegram message text\nconst url = $input.first().json.message.text;\nif (!url) {\n  throw new Error(\"telegram message.text is undefined or empty\");\n}\n\n// 2. Handle different YouTube URL formats (watch?v=, youtu.be/, /live/) with regex\nconst match = url.match(/(?:v=|youtu\\.be\\/|\\/live\\/)([A-Za-z0-9_-]+)/);\nif (!match) {\n  throw new Error(`Cannot extract videoId from URL: ${url}`);\n}\n\n// 3. Extract and output the videoId\nconst videoId = match[1];\nreturn [{ json: { videoId } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        48
+      ],
+      "id": "17cead1c-1067-41b7-9f8b-5f5c0ac35056",
+      "name": "get id"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.youtube-transcript.io/api/transcripts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic 682996f7d65f3f3f55b6c3c2"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ids\": [\n    \"{{ $json.videoId }}\"\n  ]\n} ",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        208
+      ],
+      "id": "5874cb6d-4d1a-43df-aad0-320d3922a50f",
+      "name": "youtube transcriber"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "cb93a1d4-2e15-48ef-ac26-838b5dc07ec3",
+      "name": "Telegram Trigger",
+      "webhookId": "f5876202-cf70-403d-acae-53d4aad8fa14",
+      "credentials": {
+        "telegramApi": {
+          "id": "ct6sq6ZpLxDjM2wN",
+          "name": "Telegram account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. ورودی نود HTTP Request\nconst data = $node[\"youtube transcriber\"].json;\n\n// 2. پیدا کردن آرایه‌ی captions\n// بسته به API شما ممکن است در data[0].transcript یا data.tracks[0].transcript باشد\nlet captions = [];\n\n// اگر خروجی یک لیست است و هر آیتم transcript دارد:\nif (Array.isArray(data) && data.length && Array.isArray(data[0].transcript)) {\n  captions = data[0].transcript;\n}\n// اگر خروجی در فیلد tracks قرار دارد:\nelse if (data.tracks && Array.isArray(data.tracks) && data.tracks.length && Array.isArray(data.tracks[0].transcript)) {\n  captions = data.tracks[0].transcript;\n} else {\n  throw new Error(\"فرمت غیرمنتظره: transcript پیدا نشد\");\n}\n\n// 3. استخراج فقط متن‌ها و چسباندن به هم\nconst lines = captions\n  .map(c => c.text?.trim() || \"\")\n  .filter(t => t.length > 0);\nconst transcript = lines.join(\" \");\n\n// 4. خروجی نهایی\nreturn [\n  {\n    json: {\n      transcript\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        368
+      ],
+      "id": "0f4d9a30-deca-4cca-8e63-3bee44c93a09",
+      "name": "Clean"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-05-20",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        624,
+        432
+      ],
+      "id": "a304b66d-efd6-43d9-bfcb-73ab959b51f3",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kbpuRKAch5bHc2C1",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Your Goal: Create a detailed and structured \"Reference Text\" from the provided video transcript. This Reference Text will serve as the sole knowledge source for an AI assistant, enabling it to accurately answer diverse user questions about the video's content as if the user is directly \"chatting with the video.\"\n\nInput Video Transcript:\n{{ $json['Video Text'] }}",
+        "options": {
+          "systemMessage": "Instructions for Creating the Reference Text:\n\nCore Task: Extract and organize all significant information from the video transcript. The output should be a comprehensive summary formatted for easy lookup by an AI.\nContent to Extract:\nMain topics, sub-topics, and core messages.\nKey facts, definitions, explanations, and arguments.\nIf instructional, all steps, procedures, and necessary details.\nIf narrative, key events, characters, settings, and plot points.\nConsider information that addresses potential \"who, what, when, where, why, how\" questions.\nAccuracy and Grounding:\nThe Reference Text MUST be 100% based on the information explicitly stated or clearly implied in the provided transcript.\nDO NOT introduce any external knowledge, opinions, or information not present in the transcript.\nStructure and Format:\nOrganize the information logically with clear headings and subheadings.\nUse bullet points, numbered lists (for steps/sequences), or concise paragraphs.\nConsider including a section of \"Anticipated Q&A\" where you formulate likely questions and provide answers directly from the text. This can be highly effective for the AI assistant.\nThe output should be easily digestible by another language model.\nComprehensiveness and Conciseness:\nAim for thoroughness – \"think from every angle\" to ensure all relevant details that might be queried are included.\nBe concise. Avoid redundancy and unnecessary verbosity. Focus on the information density needed for question answering."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        224,
+        528
+      ],
+      "id": "ecae1825-228e-47e5-adef-942f201b2648",
+      "name": "Cheater"
+    },
+    {
+      "parameters": {
+        "chatId": "={{$items(\"Telegram Trigger\")[0].json.message.chat.id}}",
+        "text": "=ویدیو با آیدی {{ $json['Video ID'] }} آماده است.\n\nتیتر ویدیو: {{ $('Append or update row in sheet2').item.json['Video Title'] }}\n\nسوالات پیشنهادی؛\n\n{{ $json['Video Text'] }}\n\nآماده‌ای راجع‌بهش بحث کنیم؟",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        144
+      ],
+      "id": "12d1ce09-e631-46c7-91f1-604698d6b5a3",
+      "name": "Telegram",
+      "webhookId": "66b05524-40e3-4aa9-a5aa-21c2767e9d41",
+      "credentials": {
+        "telegramApi": {
+          "id": "ct6sq6ZpLxDjM2wN",
+          "name": "Telegram account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "id"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Suggest 3 out of the box Questions in Persian Based on this Video Summery Guide that make the user wow or think\nsummery guide: {{ $json['Video Summery'] }}"
+            },
+            {
+              "content": "Please Only Output the questions!",
+              "role": "system"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        240,
+        320
+      ],
+      "id": "b229d0c8-ca82-4590-a171-81f329e7ba9d",
+      "name": "Question",
+      "credentials": {
+        "openAiApi": {
+          "id": "0YptelWmUvPdvEcW",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5347fb86-d0fe-4e8e-b80d-8ded2d41562d",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "https://www.youtube.com/watch?",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        0
+      ],
+      "id": "b07fae61-7ed5-4613-930c-ea093a325247",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Your Task is to understand the the guide and subject that is exctracted from a youtube video:\n{{ $json['Video Summery'] }}\n\nAnd Answer the User Questions About it and have a converstion with it:\nuser question: {{ $('Telegram Trigger').item.json.message.text }}",
+        "options": {
+          "systemMessage": "Rules:\n- only answer the user questiion and have a converstion with him like a friend."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        720,
+        32
+      ],
+      "id": "1e58cfb6-65c0-4c27-9b30-2db65f0ea156",
+      "name": "Converstion"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{$items(\"Telegram Trigger\")[0].json.message.chat.id}}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        848,
+        208
+      ],
+      "id": "5bc2b885-97b1-49b9-a9b4-f1abb3ef1495",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "chatId": "={{$items(\"Telegram Trigger\")[0].json.message.chat.id}}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        32
+      ],
+      "id": "0d81f736-3c00-408e-ab85-f1189d3c5273",
+      "name": "Telegram1",
+      "webhookId": "66b05524-40e3-4aa9-a5aa-21c2767e9d41",
+      "credentials": {
+        "telegramApi": {
+          "id": "ct6sq6ZpLxDjM2wN",
+          "name": "Telegram account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1Wy7hk6_9AnWUQ_uiDx5MfOm6prKQ60s2cNs5mr2vzX0/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18uqOTgKaPQenFGvIYNMO3OZjFiDE4X8EjO8y63qayEk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Video ID": "={{ $('Append or update row in sheet2').item.json['Video ID'] }}",
+            "Video Text": "={{ $json.message.content }}"
+          },
+          "matchingColumns": [
+            "Video ID"
+          ],
+          "schema": [
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Video Title",
+              "displayName": "Video Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Video Text",
+              "displayName": "Video Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Video Summery",
+              "displayName": "Video Summery",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1008,
+        320
+      ],
+      "id": "11a79381-cea4-4e3b-84e8-26f0decde153",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TZdvch2EQouZVtoy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1VEcV_WVCcJLwYmrsnIsmvhGZvwCy2JJSQIGRkmCfQBg/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18uqOTgKaPQenFGvIYNMO3OZjFiDE4X8EjO8y63qayEk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Video ID": "={{ $('Append or update row in sheet2').item.json['Video ID'] }}",
+            "Video Summery": "={{ $json.output }}"
+          },
+          "matchingColumns": [
+            "Video ID"
+          ],
+          "schema": [
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Video Title",
+              "displayName": "Video Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Video Text",
+              "displayName": "Video Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Video Summery",
+              "displayName": "Video Summery",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1008,
+        528
+      ],
+      "id": "262a128f-180c-4a74-b909-4095ed112543",
+      "name": "Append or update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TZdvch2EQouZVtoy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1vItAT-RPgr2xr2zPfIauj_bywyyvogEt9Dr9biXQKOU/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1vItAT-RPgr2xr2zPfIauj_bywyyvogEt9Dr9biXQKOU/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        592,
+        32
+      ],
+      "id": "819fda3c-d6fc-4173-b6b4-b0c453a3e3ba",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TZdvch2EQouZVtoy",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1OABNRP0F0yaRZ7aTfiic0EqCAzP2SL06A7tjbmrJnu8/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18uqOTgKaPQenFGvIYNMO3OZjFiDE4X8EjO8y63qayEk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Video ID": "={{ $('youtube transcriber').item.json.id }}",
+            "Video Title": "={{ $('youtube transcriber').item.json.title }}",
+            "Video Text": "={{ $json.transcript }}"
+          },
+          "matchingColumns": [
+            "Video ID"
+          ],
+          "schema": [
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Video Title",
+              "displayName": "Video Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Video Text",
+              "displayName": "Video Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Video Summery",
+              "displayName": "Video Summery",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        528
+      ],
+      "id": "b9f1c370-1f9d-4b70-b418-bf2fac690cea",
+      "name": "Append or update row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TZdvch2EQouZVtoy",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "get id": {
+      "main": [
+        [
+          {
+            "node": "youtube transcriber",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "youtube transcriber": {
+      "main": [
+        [
+          {
+            "node": "Clean",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Cheater",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Converstion",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cheater": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Question": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "get id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Converstion",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converstion": {
+      "main": [
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Converstion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet2": {
+      "main": [
+        [
+          {
+            "node": "Cheater",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "bb4ee6ee-b11f-4235-9b18-39eac7c87941",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3181f7fbd61c75f43081e9c0bf5ee3a99eef47e6ecd97e364a854f0356a066e8"
+  },
+  "id": "ObDw4MkFuJAL1P7K",
+  "tags": []
+}

@@ -1,0 +1,560 @@
+{
+  "name": "skywebs_signal_bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ca0d4c93-5c4c-4992-b191-36df7ba204bf",
+      "name": "Telegram Trigger",
+      "webhookId": "43202dbb-51c5-431e-b7b3-2d4f6e306cb6",
+      "credentials": {
+        "telegramApi": {
+          "id": "ct6sq6ZpLxDjM2wN",
+          "name": "Telegram account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// This code is designed for the n8n Code node.\n// It processes each item received by the node.\n\nconst outputItems = [];\n\nfor (const item of items) {\n  try {\n    // Access the input text from the specified path\n    const inputText = item.json?.message?.text;\n\n    // Check if the input text exists and is a string\n    if (typeof inputText === 'string') {\n      // Trim whitespace, convert to uppercase, remove all non-alphanumeric characters\n      const cleanSymbol = inputText.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');\n       \n      // Check if the cleaned symbol is not empty\n      if (cleanSymbol.length > 0) {\n        const tradingPairSymbol = cleanSymbol + \"USDT\";\n\n        // Create the output JSON object for the current item\n        outputItems.push({\n          json: {\n            tradingPair: tradingPairSymbol,\n            originalInput: inputText // Optional: keep original for debugging\n          }\n        });\n      } else {\n        outputItems.push({\n          json: {\n            error: \"Invalid symbol after cleaning\"\n          }\n        });\n      }\n    } else {\n      // Handle cases where the expected input is missing or not a string\n      console.error(\"Input 'json.message.text' is missing or not a string for item:\", item);\n      outputItems.push({\n        json: {\n          error: \"Invalid or missing input for json.message.text\"\n        }\n      });\n    }\n  } catch (error) {\n    // Catch any potential errors during the processing of an item\n    console.error(\"Error processing item:\", item, error);\n    outputItems.push({\n      json: {\n        error: \"An unexpected error occurred during processing\"\n      }\n    });\n  }\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "c64d49e6-52ed-4bf8-abc2-00e075f66028",
+      "name": "coin2CAPS"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.binance.com/api/v3/klines?symbol={{ $json.tradingPair }}&interval=15m&limit=100",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "d3f32883-aa43-48cc-b17a-e2c9fc509e85",
+      "name": "Binance 15Min"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.binance.com/api/v3/klines?symbol={{ $json.tradingPair }}&interval=1h&limit=100",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        160
+      ],
+      "id": "2c3a1ff4-584e-4a79-8380-a7cf5c5d11f8",
+      "name": "Binance 1H"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.binance.com/api/v3/klines?symbol={{ $json.tradingPair }}&interval=1d&limit=100",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        320
+      ],
+      "id": "9be21a63-8c8c-4f85-9bd9-86a89a7494b8",
+      "name": "Binance 1Day"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"timeframe\": \"15m\",\n  \"candles\": {{ $json }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        0
+      ],
+      "id": "fa3754fc-c84f-4bdf-8d20-13a27e14548c",
+      "name": "15Min"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"timeframe\": \"1h\",\n  \"candles\": {{ $json }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        160
+      ],
+      "id": "457634fb-3651-4fa8-aff8-6fe433cf061e",
+      "name": "1h"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"timeframe\": \"1day\",\n  \"candles\": {{ $json }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        352
+      ],
+      "id": "3ae1d3ac-33a6-4a0d-b827-c3030287c921",
+      "name": "1day"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        880,
+        160
+      ],
+      "id": "f2bb0721-ef8b-4235-be5e-3913f8d71501",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/everything",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "crypto OR bitcoin OR COINDESK"
+            },
+            {
+              "name": "from",
+              "value": "={{ new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }}"
+            },
+            {
+              "name": "sortBy",
+              "value": "popularity"
+            },
+            {
+              "name": "apikey",
+              "value": "a2645bb0134e4737840025a36ad640fb"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        512
+      ],
+      "id": "6e2055d4-dfb5-4d52-be3d-be91e95a4137",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// grab your array of articles (from the single HTTP-Request item)\nconst articles = $json.articles || [];\n\n// pick off only the bits you care about\nconst filteredArticles = articles.map(article => ({\n  title: article.title,\n  description: article.description,\n}));\n\n// emit one item whose .json.filteredArticles is your new array\nreturn [\n  {\n    json: {\n      filteredArticles,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        512
+      ],
+      "id": "0e9a1e2d-b264-4372-bc22-45b1fadb453d",
+      "name": "Filter News Articles"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "id"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a highly intelligent and accurate sentiment analyzer specializing in cryptocurrency markets. Analyze the sentiment of the provided text using a two-part approach:\n\nShort-Term Sentiment:\n\nEvaluate the immediate market reaction, recent news impact, and technical volatility.\nDetermine a sentiment category: \"Positive\", \"Neutral\", or \"Negative\".\nCalculate a numerical score between -1 (extremely negative) and 1 (extremely positive).\nProvide a concise rationale explaining the short-term sentiment (give a detailed response with appropriate headlines for major events, and cryptocurrencies.\nLong-Term Sentiment:\n\nEvaluate the overall market outlook, fundamentals, and regulatory or macroeconomic factors.\nDetermine a sentiment category: \"Positive\", \"Neutral\", or \"Negative\".\nCalculate a numerical score between -1 (extremely negative) and 1 (extremely positive).\nProvide a detailed rationale explaining the long-term sentiment (give a detailed response with appropriate headlines for major events, and cryptocurrencies.\nYour output must be exactly a JSON object with exactly two keys: \"shortTermSentiment\" and \"longTermSentiment\". The value of each key must be an object with three keys: \"category\", \"score\", and \"rationale\". Do not output any additional text.\n\nFor example, your output should look like:\n\nJSON\n\n{\n  \"shortTermSentiment\": {\n    \"category\": \"Positive\",\n    \"score\": 0.7,\n    \"rationale\": \"....\"\n  },\n  \"longTermSentiment\": {\n    \"category\": \"Neutral\",\n    \"score\": 0.0,\n    \"rationale\": \"...\"\n  }\n}\nNow, analyze the following text and produce your JSON output:\n{{ JSON.stringify($json.filteredArticles) }}",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1024,
+        352
+      ],
+      "id": "3ca1d970-b23b-42e0-86e6-d6d79832a2f2",
+      "name": "Sentiment Analysis",
+      "credentials": {
+        "openAiApi": {
+          "id": "0YptelWmUvPdvEcW",
+          "name": "OpenAi account 3"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// this code runs in your n8n Code node\n// `items` is the array of incoming items from the Merge node\n\n// collect all the candle JSONs\nconst allCandles = items.map(item => item.json);\n\n// return a single item with allCandles\nreturn [\n  {\n    json: {\n      allCandles,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        160
+      ],
+      "id": "2250754d-9fd2-4b9e-9f50-51b1301f5c0e",
+      "name": "Combine"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        1408,
+        240
+      ],
+      "id": "b86986e3-56c3-445e-8f0a-108a18604a7e",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// This code is designed for the n8n Code node.\n// It merges candlestick data and content from multiple input items.\n\n// Initialize containers for each set of data.\nconst allCandles = [];\nlet contentData = null;\n\n// Loop over each item from the merge node.\n// The 'items' variable contains the data from the previous node(s).\nfor (const item of items) {\n  // If the item has candlestick data (assuming it's in item.json.allCandles), add it to the array.\n  // We check for 'undefined' to ensure the property exists.\n  if (item.json.allCandles !== undefined) {\n    // Assuming item.json.allCandles is an array, use spread syntax to add its elements.\n    if (Array.isArray(item.json.allCandles)) {\n        allCandles.push(...item.json.allCandles);\n    } else {\n        // Handle cases where allCandles is not an array if necessary\n        console.warn(\"Expected item.json.allCandles to be an array, but received:\", item.json.allCandles);\n        // Optionally, push the non-array data or handle the error differently\n    }\n  }\n\n  // If the item has embedded content (in message.content), store it.\n  // This assumes there's only one piece of content you want to store across all merged items.\n  // If multiple items have message.content, the last one processed will be stored.\n  if (item.json.message && item.json.message.content !== undefined) {\n    contentData = item.json.message.content;\n  }\n}\n\n// Return a single item with both the collected candlestick data and the content.\n// n8n expects an array of items as output.\nreturn [{\n  json: {\n    allCandles, // This is shorthand for allCandles: allCandles\n    content: contentData\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        240
+      ],
+      "id": "2ab7dca0-c379-475b-b88d-02dce290ed8f",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=لطفاً همیشه به زبان فارسی پاسخ بده، اما تمام اصطلاحات تخصصی مربوط به بازار رمزارزها (مانند نام ارزها، نمادها، اندیکاتورها، تایم‌فریم‌ها، اصطلاحات فنی مانند RSI، MACD، Support، Resistance و ...) را به زبان انگلیسی و بدون ترجمه بیان کن. مثال: «اتریوم (ETH)»، «اندیکاتور RSI روی ۷۰ قرار دارد». از ترجمه اصطلاحات فنی خودداری کن و لحن صحبت دوستانه و قابل فهم برای کاربران فارسی‌زبان باشد. \nhere is combined market data for {{ $('coin2CAPS').first().json.tradingPair }} you\nto reference :\n\nTechnical Data :\n{{ JSON.stringify($json[\"allCandles\" ] ) }}\n\nSentiment Analysis :\n{{ JSON.stringify($json[\"content\" ] ) }}\n\nThis is a JSON array where each element is a\ncandlestick data object for a crypto asset . Each\nobject has the following structure :\n\ncandles : an array of values in the following        timeframe : either \" 15m \" , \" 1h \" , or \" 1d \"\norder :\n\n[ openTime , open , high , low , close , volume ,\ncloseTime , quoteVolume , trades ,\n\ntakerBuyBaseVolume , takerBuyQuoteVolume , ignore ]\n\nSentiment Data : At the end of the JSON array\nthere is also a long term and short term\nsentiment analysis based on crypto news\nheadlines for the past 7 days .\n\nPlease perform the following steps:\" - This indicates a set of instructions to follow.\n\nGroup the Data:\n\nInstruction: \"Group the candlestick objects by timeframe into three groups:\"\nGroups Defined:\n\"Short-term data: \"15m\" candles\"\n\"Medium-term data: \"1h\" candles\"\n\"Long-term data: \"1d\" candles\"\nMeaning: This step requires organizing the available candlestick data based on its timeframe (15-minute, 1-hour, and 1-day intervals).\nAnalyze the Data in Detail:\n\nInstruction: \"Analyze the Data in Detail:\" - This introduces the analysis phase.\nShort-term Analysis:\n\nData Used: \"Use the 15m candles (with supportive insights from the 1h candles)\"\nAnalysis Goals: \"to evaluate volatility and determine near-term support and resistance levels.\"\nMethodology: \"In your analysis, combine traditional lagging indicators (such as MACD, RSI, and OBV) as confirmation tools with direct price action elements-like key support/resistance zones, trendlines, and divergence patterns.\"\nFocus: \"Focus on these price-based signals to capture immediate market sentiment and structural levels.\"\nMeaning: This section details how to perform the short-term analysis. It emphasizes using 15-minute candles as the primary data, supported by 1-hour candles. The analysis should focus on volatility, support/resistance, and combine lagging indicators (like MACD, RSI, OBV) for confirmation with direct price action analysis (zones, trendlines, divergence). The key is to prioritize price-based signals for capturing immediate sentiment and market structure.\n\nGenerate Trading Recommendations:\n\nFor Spot Trading:\n\nAction: (buy, sell, or hold)\nEntry Price:\n\nStop-Loss Level:\nTake Profit (TP) Level:\n\nRationale: Provide an extremely detailed\nexplanation of your recommendation. Break down\nyour rationale into three parts:\n\na. Primary Signals: Describe key price action\ninsights (support/resistance zones, trendline\nbreakouts or bounces, divergence patterns).\n\nb. Lagging Indicators: Explain how indicators\n(MACD, RSI, OBV, etc.) confirm or supplement\nthese signals.\n\nc. Sentiment Analysis: Discuss volume trends,\nmarket sentiment, and macro factors. Combine\nthese elements into one comprehensive\nexplanation.\n\nFor Leveraged Trading:\n\nPosition: (long or short)\nRecommended Leverage: (e.g., 3x, 5x, etc.)\n\nEntry Price:\nStop-Loss Level:\n\nTake Profit (TP) Level:\nRationale: Provide a detailed explanation that\nsimilarly breaks down your rationale into:\n\na. Primary Price Action Signals: Outline key\nsupport/resistance levels, trendlines, and\ndivergence patterns.\n\nb. Lagging Indicator Confirmation: Describe\nhow indicators validate these signals.\n\nc. Sentiment & Macro Analysis: Include\nanalysis of volume trends, overall market\nsentiment, and broader economic factors.\n\nOutput Format:\nReturn the final result as plain text with\nconsistent styling for Telegram (html).\nEach section header (e.g., \"Spot\nRecommendations\") is in bold.\nEach sub-section (e.g., Primary Signals, Lagging\nIndicators, Sentiment Analysis) is also in bold.\nUse clear line breaks between sections and\nbullet points for clarity.\n\n\"{{ $('coin2CAPS').first().json.tradingPair }}\nanalysis for {{ $now }} (But make sure to format\nthe date as \"mm/dd/yyyy at xx:xxpm\")\n\nSpot Recommendations:\n\nShort-term:\n• Action: ...\n• Entry Price: ...\n• Stop Loss: ...\n• Take Profit: ...\n• Rationale:\n- Primary Price Action Signals: ...\n- Lagging Indicator Confirmation: ...\n- Sentiment & Macro Analysis: ...\n\nLeveraged Recommendations:\n\nShort-term:\n• Position: ...\n• Leverage: ...\n• Entry Price: ...\n• Stop Loss: ...\n• Take Profit: ...\n• Rationale:\n- Primary Price Action Signals: ...\n- Lagging Indicator Confirmation: ...\n- Sentiment & Macro Analysis: ...\n\nLong-term:\n• Position: ...\n• Leverage: ...\n• Entry Price: ...\n• Stop Loss: ...\n• Take Profit: ...\n• Rationale:\n- Primary Price Action Signals: ...\n- Lagging Indicator Confirmation: ...\n- Sentiment & Macro Analysis: ...",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        1840,
+        192
+      ],
+      "id": "294bd070-f722-4188-ad35-3f656760f483",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-04-17",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1952,
+        464
+      ],
+      "id": "c9cc4d40-7d0a-4c83-8acc-6c432336c7ed",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "jiV9zG9gjSLG6Ii7",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// This code is designed for the n8n Code node.\n// It takes a string input and splits it into two halves,\n// returning each half as a separate item with a block number.\n\n// Access the input text from the 'output' property of the first item.\n// Use || \"\" to default to an empty string if the property is missing or falsy.\nconst inputText = $json[\"output\"] || \"\";\n\n// Check if the input text is actually a string.\n// If not, throw an error as the code expects a string input.\nif (typeof inputText !== \"string\") {\n  throw new Error(\"Input must be a string\");\n}\n\n// Calculate the middle index to split the string.\n// Math.ceil ensures that if the string has an odd length,\n// the first half will be slightly longer.\nconst mid = Math.ceil(inputText.length / 2);\n\n// Extract the first half of the string from the beginning up to the middle index.\nconst firstHalf = inputText.substring(0, mid);\n\n// Extract the second half of the string from the middle index to the end.\nconst secondHalf = inputText.substring(mid);\n\n// Return an array of items.\n// Each item contains a 'json' property with 'blockNumber' and 'content'.\nreturn [\n  { json: { blockNumber: 1, content: firstHalf } }, // First half as item 1\n  { json: { blockNumber: 2, content: secondHalf } }, // Second half as item 2\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        240
+      ],
+      "id": "50d7f6fe-b7de-43ab-90ce-9a05a2c30590",
+      "name": "Half"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "={{ $json.content }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2512,
+        240
+      ],
+      "id": "e18dc45d-ca7d-4a79-a917-88adaf68048c",
+      "name": "Telegram",
+      "webhookId": "eb1288c8-58e5-4706-b95c-1246efae1885",
+      "credentials": {
+        "telegramApi": {
+          "id": "ct6sq6ZpLxDjM2wN",
+          "name": "Telegram account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "coin2CAPS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "coin2CAPS": {
+      "main": [
+        [
+          {
+            "node": "Binance 15Min",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Binance 1H",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Binance 1Day",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Binance 15Min": {
+      "main": [
+        [
+          {
+            "node": "15Min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Binance 1H": {
+      "main": [
+        [
+          {
+            "node": "1h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Binance 1Day": {
+      "main": [
+        [
+          {
+            "node": "1day",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15Min": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1h": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "1day": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Combine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Filter News Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter News Articles": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sentiment Analysis": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Half",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Half": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f5c4d75d-4de4-48e0-a2b7-bf10af4d38f9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3181f7fbd61c75f43081e9c0bf5ee3a99eef47e6ecd97e364a854f0356a066e8"
+  },
+  "id": "MuP94tW5IYpKgwWW",
+  "tags": []
+}
